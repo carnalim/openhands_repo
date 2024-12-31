@@ -4,9 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hello World</title>
+    <style>
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .user-list { margin-top: 30px; }
+    </style>
 </head>
 <body>
-    <h1>Hello, World!</h1>
-    <p>Welcome to OpenHands website!</p>
+    <div class="container">
+        <h1>Hello, World!</h1>
+        <p>Welcome to OpenHands website!</p>
+
+        <h2>Create New User</h2>
+        <div class="form-group">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username">
+        </div>
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email">
+        </div>
+        <button onclick="createUser()">Create User</button>
+
+        <div class="user-list">
+            <h2>Users</h2>
+            <ul id="users"></ul>
+        </div>
+    </div>
+
+    <script>
+        function loadUsers() {
+            fetch('/api/users')
+                .then(response => response.json())
+                .then(users => {
+                    const usersList = document.getElementById('users');
+                    usersList.innerHTML = users.map(user => 
+                        `<li>${user.username} (${user.email})</li>`
+                    ).join('');
+                });
+        }
+
+        function createUser() {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+
+            fetch('/api/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, email })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    document.getElementById('username').value = '';
+                    document.getElementById('email').value = '';
+                    loadUsers();
+                }
+            });
+        }
+
+        // Load users when page loads
+        loadUsers();
+    </script>
 </body>
 </html>
