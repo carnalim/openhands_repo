@@ -93,6 +93,11 @@
     </div>
     <button onclick="createCustomer()">Create Customer</button>
     <div id="customerMessage" class="message-box"></div>
+    
+    <div class="customer-list">
+        <h3>Existing Customers</h3>
+        <ul id="customerList"></ul>
+    </div>
 </div>
 
 <div class="card metronome-container">
@@ -133,7 +138,6 @@
     
     async function createCustomer() {
         const customerName = document.getElementById('customerName').value.trim();
-        const messageBox = document.getElementById('customerMessage');
         
         if (!customerName) {
             showMessage('Please enter a customer name', 'error');
@@ -141,7 +145,8 @@
         }
 
         try {
-            const response = await fetch('https://api.metronome.com/v1/customers', {
+            // First, create customer in Metronome API
+            const metronomeResponse = await fetch('https://api.metronome.com/v1/customers', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${METRONOME_API_KEY}`,
@@ -152,16 +157,49 @@
                 })
             });
 
-            const data = await response.json();
+            const metronomeData = await metronomeResponse.json();
 
-            if (response.ok) {
-                showMessage(`Customer "${customerName}" created successfully!`, 'success');
-                document.getElementById('customerName').value = '';
-            } else {
-                showMessage(`Error: ${data.message || 'Failed to create customer'}`, 'error');
+            if (!metronomeResponse.ok) {
+                throw new Error(metronomeData.message || 'Failed to create customer in Metronome');
             }
+
+            // Then, create customer in our database
+            const localResponse = await fetch('/api/customers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: customerName,
+                    metronome_id: metronomeData.id
+                })
+            });
+
+            const localData = await localResponse.json();
+
+            if (!localResponse.ok) {
+                throw new Error(localData.error || 'Failed to create customer in local database');
+            }
+
+            showMessage(`Customer "${customerName}" created successfully!`, 'success');
+            document.getElementById('customerName').value = '';
+            loadCustomers();
         } catch (error) {
             showMessage(`Error: ${error.message}`, 'error');
+        }
+    }
+
+    async function loadCustomers() {
+        try {
+            const response = await fetch('/api/customers');
+            const customers = await response.json();
+            
+            const customerList = document.getElementById('customerList');
+            customerList.innerHTML = customers.map(customer => 
+                `<li>${customer.name} (ID: ${customer.metronome_id})</li>`
+            ).join('');
+        } catch (error) {
+            console.error('Error loading customers:', error);
         }
     }
 
@@ -267,5 +305,8 @@
 
     // Update display on load
     updateTempoDisplay();
+    
+    // Load initial customer list
+    loadCustomers();
 </script>
 {% endblock %}

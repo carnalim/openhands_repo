@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template, request, jsonify
 from flask_migrate import Migrate
-from models import db, User
+from models import db, User, Customer
 
 app = Flask(__name__)
 
@@ -49,6 +49,30 @@ def create_user():
             'email': user.email,
             'created_at': user.created_at.isoformat()
         }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/customers', methods=['GET'])
+def get_customers():
+    customers = Customer.query.all()
+    return jsonify([customer.to_dict() for customer in customers])
+
+@app.route('/api/customers', methods=['POST'])
+def create_customer():
+    data = request.get_json()
+    
+    if not data or 'name' not in data or 'metronome_id' not in data:
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    try:
+        customer = Customer(
+            name=data['name'],
+            metronome_id=data['metronome_id']
+        )
+        db.session.add(customer)
+        db.session.commit()
+        return jsonify(customer.to_dict()), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
