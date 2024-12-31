@@ -62,13 +62,19 @@ def get_customers():
 def create_customer():
     data = request.get_json()
     
-    if not data or 'name' not in data or 'metronome_id' not in data:
+    if not data or 'name' not in data:
         return jsonify({'error': 'Missing required fields'}), 400
     
     try:
+        # Generate unique IDs for metronome and stripe
+        import uuid
+        metronome_id = f"met_{uuid.uuid4().hex[:16]}"
+        stripe_id = f"cus_{uuid.uuid4().hex[:16]}"
+        
         customer = Customer(
             name=data['name'],
-            metronome_id=data['metronome_id']
+            metronome_id=metronome_id,
+            stripe_id=stripe_id
         )
         db.session.add(customer)
         db.session.commit()
