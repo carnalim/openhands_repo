@@ -18,9 +18,6 @@ migrate = Migrate(app, db)
 def index():
     return render_template('index.html')
 
-@app.route('/metronome')
-def metronome():
-    return render_template('metronome.html')
 
 @app.route('/api/users', methods=['GET'])
 def get_users():
